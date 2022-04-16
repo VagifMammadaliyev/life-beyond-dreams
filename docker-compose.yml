@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  api:
+    container_name: life_beyond_dreams_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - "./src:/life-beyond-dreams"
+    ports:
+      - "8000:8000"
+    env_file: .env
