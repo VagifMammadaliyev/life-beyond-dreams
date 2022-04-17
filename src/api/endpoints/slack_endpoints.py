@@ -1,18 +1,15 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
-import slack
 from fastapi import Response
 from fastapi.routing import APIRouter
 
 from api.constants import SlackEventHookType, SlackEventType
-from api.exceptions import ForbiddenError, ServerError, ClientError
+from api.exceptions import ClientError, ForbiddenError, ServerError
 from api.schemas import SlackEventHookRequest
 from core import conf
 from services.bot import Bot
 
-
 router = APIRouter(prefix="/slack", tags=["slack"])
-slack_client = slack.WebClient(token=conf.SLACK_BOT_TOKEN)
 
 
 def _handle_url_verification(
@@ -30,8 +27,7 @@ async def _handle_event_callback(event_hook_request: SlackEventHookRequest) -> R
     if event.type == SlackEventType.MESSAGE:
         if event.bot_profile:
             return Response()
-        bot_message = await Bot().respond(event.user, event.text)
-        slack_client.chat_postMessage(channel=event.channel, text=bot_message)
+        await Bot().respond(event.channel, event.user, event.text)
         return Response()
     raise ServerError(
         detail="Cannot handle this event",

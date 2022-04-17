@@ -1,6 +1,5 @@
 from decouple import config
 
-
 MONGO_CONNECTION_URL = config("MONGO_CONNECTION_URL")
 
 SLACK_BOT_TOKEN = config("SLACK_BOT_TOKEN")
