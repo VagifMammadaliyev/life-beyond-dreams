@@ -1,6 +1,6 @@
+from collections import defaultdict
 from typing import Dict
 
-from collections import defaultdict
 from fuzzywuzzy import process
 
 from core import conf

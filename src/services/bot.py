@@ -1,11 +1,16 @@
+import asyncio
 import random
-from typing import Tuple
 from enum import Enum
+from typing import Tuple
 
-from services.utils import compare_str, analyze_words, update_stats
+import slack
+
+from core import conf, db
 from repositories.dreams_repository import DreamsRepository
 from repositories.stats_repository import StatsRepository
-from core import db
+from services.utils import analyze_words, compare_str, update_stats
+
+slack_client = slack.WebClient(token=conf.SLACK_BOT_TOKEN)
 
 
 class BotCommand(str, Enum):
@@ -49,6 +54,14 @@ class Bot:
         self.dreams_repository = DreamsRepository(db.db_engine)
         self.stats_repository = StatsRepository(db.db_engine)
 
+    async def notify_to_check_reality(self):
+        channels = await self.dreams_repository.get_distinct_channels()
+        for channel in channels:
+            slack_client.chat_postMessage(
+                channel=channel,
+                text="Check your surroundings to confirm you are awake",
+            )
+
     def recognize_command(self, message: str) -> Tuple[BotCommand, str]:
         splitted_message = message.split("\n")
         if len(splitted_message) > 1:
@@ -62,7 +75,9 @@ class Bot:
                     return (command, "\n".join(rest_of_message))
                 return (command, message)
 
-    async def handle_command(self, command: BotCommand, user: str, message: str) -> str:
+    async def handle_command(
+        self, command: BotCommand, channel: str, user: str, message: str
+    ) -> str:
         if command == BotCommand.GREET:
             return random.choice(
                 (
@@ -77,7 +92,9 @@ class Bot:
             current_stats = await self.stats_repository.get_stats(user=user)
             new_stats = update_stats(current_stats, additional_stats)
             await self.stats_repository.save_stats(user=user, stats=new_stats)
-            await self.dreams_repository.save_dream(user=user, dream=message)
+            await self.dreams_repository.save_dream(
+                user=user, channel=channel, dream=message
+            )
             return "Saved your dream"
         elif command == BotCommand.STATS:
             current_stats = await self.stats_repository.get_stats(user=user)
@@ -91,9 +108,20 @@ class Bot:
             return "\n".join(response_message_lines)
         return "Somehow this line is reached..."
 
-    async def respond(self, user: str, message: str) -> str:
+    async def respond(self, channel: str, user: str, message: str) -> str:
         recognition = self.recognize_command(message)
         if recognition:
             command, message = recognition
-            return await self.handle_command(command, user, message)
+            response = await self.handle_command(command, channel, user, message)
+            slack_client.chat_postMessage(channel=channel, text=response)
         return "I am not sure what you mean"
+
+
+async def notify_to_check_reality():
+    while True:
+        await Bot().notify_to_check_reality()
+        await asyncio.sleep(30 * 60)
+
+
+event_loop = asyncio.get_event_loop()
+event_loop.create_task(notify_to_check_reality())
