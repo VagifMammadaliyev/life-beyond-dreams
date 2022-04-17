@@ -3,3 +3,4 @@ fastapi==0.75.1
 motor==2.5.1
 uvicorn==0.17.6
 python-decouple==3.6 
+fuzzywuzzy==0.18.0
