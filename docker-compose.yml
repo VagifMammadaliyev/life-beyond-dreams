@@ -17,8 +17,6 @@ services:
   mongo:
     container_name: life_beyond_dreams_db
     image: mongo
-    ports:
-      - "27017:27017"
     volumes:
       - "life_beyond_dreams_db:/data/db"
 
